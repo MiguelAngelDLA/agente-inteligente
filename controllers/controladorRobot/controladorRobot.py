@@ -1,111 +1,96 @@
-from controller import Robot, Motor
+from controller import Robot
 
-# ---------------- CONFIG ----------------
+# --- Configuración ---
 TIME_STEP = 64
-MAX_SPEED = 6.28
-NUM_GNOMES = 10
-GNOME_PREFIX = "GNOME"
+WHEEL_RADIUS = 0.15   # radio de las ruedas en metros (ajusta según tu robot)
+AXLE_LENGTH = 0.6    # distancia entre ruedas en metros (ajusta según tu robot)
 
-# ---------------- INIT ----------------
 robot = Robot()
 
 # Motores
-left_motor = robot.getDevice("left wheel motor")
-right_motor = robot.getDevice("right wheel motor")
-for m in [left_motor, right_motor]:
-    m.setPosition(float("inf"))
-    m.setVelocity(0.0)
+motor1 = robot.getDevice("motor1")
+motor2 = robot.getDevice("motor2")
+motor1.setPosition(float("inf"))
+motor2.setPosition(float("inf"))
+motor1.setVelocity(0.0)
+motor2.setVelocity(0.0)
 
-# Sensores de proximidad (los que me diste)
-sensor_names = [
-    "front infrared sensor",
-    "front left infrared sensor",
-    "front left ultrasonic sensor",
-    "front right infrared sensor",
-    "front right ultrasonic sensor",
-    "front ultrasonic sensor",
-    "ground front left infrared sensor",
-    "ground front right infrared sensor",
-    "ground left infrared sensor",
-    "ground right infrared sensor",
-    "left infrared sensor",
-    "left ultrasonic sensor",
-    "rear infrared sensor",
-    "rear left infrared sensor",
-    "rear right infrared sensor",
-    "right infrared sensor",
-    "right ultrasonic sensor"
-]
+# Encoders
+enc1 = robot.getDevice("motor1_sensor")
+enc2 = robot.getDevice("motor2_sensor")
+enc1.enable(TIME_STEP)
+enc2.enable(TIME_STEP)
 
-sensors = {}
-for name in sensor_names:
-    s = robot.getDevice(name)
-    s.enable(TIME_STEP)
-    sensors[name] = s
+# --- Estado odométrico ---
+x, y, theta = 0.0, 0.0, 0.0
+last_enc1 = enc1.getValue()
+last_enc2 = enc2.getValue()
 
-# Cámara
-camera = robot.getDevice("camera")
-camera.enable(TIME_STEP)
-camera.recognitionEnable(TIME_STEP)
+def update_odometry():
+    global x, y, theta, last_enc1, last_enc2
 
-# Lista de gnomos
-gnomes = [robot.getFromDef(GNOME_PREFIX if i == 0 else f"{GNOME_PREFIX}({i})") for i in range(NUM_GNOMES)]
-gnome_active = [True] * NUM_GNOMES
-gnomes_collected = 0
+    # Lectura actual
+    left = enc1.getValue()
+    right = enc2.getValue()
 
-# ---------------- MAIN LOOP ----------------
+    # Incremento de cada rueda
+    dl = (left - last_enc1) * WHEEL_RADIUS
+    dr = (right - last_enc2) * WHEEL_RADIUS
+    last_enc1, last_enc2 = left, right
+
+    # Distancia y cambio angular
+    dc = (dl + dr) / 2.0
+    dtheta = (dr - dl) / AXLE_LENGTH
+
+    # Actualizar pose
+    x += dc * cos(theta + dtheta / 2.0)
+    y += dc * sin(theta + dtheta / 2.0)
+    theta += dtheta
+
+# --- Movimiento simple: cubrir 10x10 en cuadrícula ---
+from math import sin, cos, pi
+
+SPEED = 3.0
+STEP_DIST = 1.0   # avanzar 1 metro antes de girar
+
+def go_forward():
+    motor1.setVelocity(SPEED)
+    motor2.setVelocity(SPEED)
+
+def stop():
+    motor1.setVelocity(0)
+    motor2.setVelocity(0)
+
+def turn_left():
+    motor1.setVelocity(-SPEED)
+    motor2.setVelocity(SPEED)
+
+def turn_right():
+    motor1.setVelocity(SPEED)
+    motor2.setVelocity(-SPEED)
+
+# --- Bucle principal ---
+import time
+row = 0
+direction = 1
+
 while robot.step(TIME_STEP) != -1:
-    objects = camera.getRecognitionObjects()
-    gnome_detected = None
+    update_odometry()
 
-    # Buscar gnomos visibles
-    for obj in objects:
-        if obj.getModel().startswith(GNOME_PREFIX):
-            gnome_detected = obj
-            break
-
-    if gnome_detected:
-        # Posición del gnomo en la imagen
-        image_width = camera.getWidth()
-        center_x = image_width / 2
-        gnome_x = gnome_detected.getPositionOnImage()[0]
-
-        # Seguir al gnomo (alineación simple)
-        if gnome_x < center_x - 10:  # gnomo a la izquierda
-            left_motor.setVelocity(0.3 * MAX_SPEED)
-            right_motor.setVelocity(0.6 * MAX_SPEED)
-        elif gnome_x > center_x + 10:  # gnomo a la derecha
-            left_motor.setVelocity(0.6 * MAX_SPEED)
-            right_motor.setVelocity(0.3 * MAX_SPEED)
-        else:  # centrado → avanzar
-            left_motor.setVelocity(MAX_SPEED)
-            right_motor.setVelocity(MAX_SPEED)
-
-        # Comprobar contacto con sensores frontales
-        front_ir = sensors["front infrared sensor"].getValue()
-        front_ultra = sensors["front ultrasonic sensor"].getValue()
-
-        if front_ir > 300 or front_ultra > 300:  # umbral de contacto
-            gnome_name = gnome_detected.getModel()
-            print(f"✅ Gnomo tocado: {gnome_name}")
-            node = robot.getFromDef(gnome_name)
-            if node:
-                node.getField("translation").setSFVec3f([0, -10, 0])  # desaparecer
-                gnomes_collected += 1
-                # marcar como inactivo
-                for idx, g in enumerate(gnomes):
-                    if g and g.getDef() == gnome_name:
-                        gnome_active[idx] = False
-                        break
-
+    # Ejemplo: movimiento en zig-zag para cubrir 10x10
+    if row < 10:
+        if (direction == 1 and x < (row+1)*STEP_DIST) or (direction == -1 and x > (row+1)*STEP_DIST - 10):
+            go_forward()
+        else:
+            stop()
+            time.sleep(0.5)
+            if direction == 1:
+                turn_left()
+            else:
+                turn_right()
+            time.sleep(1.0)  # tiempo de giro (ajustar según robot)
+            stop()
+            row += 1
+            direction *= -1
     else:
-        # No hay gnomos visibles → patrullar girando
-        left_motor.setVelocity(0.5 * MAX_SPEED)
-        right_motor.setVelocity(-0.5 * MAX_SPEED)
-
-    # Si ya recolectó todos, detenerse
-    if gnomes_collected == NUM_GNOMES:
-        print("🎉 Todos los gnomos recolectados!")
-        left_motor.setVelocity(0)
-        right_motor.setVelocity(0)
-        break
+        stop()

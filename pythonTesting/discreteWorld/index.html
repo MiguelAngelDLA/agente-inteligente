@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Visor VSLAM del Robot</title>
+    <style>
+        body { background-color: #14141e; color: #f0f0f0; font-family: sans-serif; text-align: center; margin: 0; padding-top: 20px; }
+        h1 { margin-bottom: 20px; }
+        canvas { background-color: #282832; border: 1px solid #3c3c46; }
+    </style>
+</head>
+<body>
+    <h1>Mapa de Memoria del Robot (VSLAM)</h1>
+    <canvas id="vslamCanvas" width="800" height="800"></canvas>
+
+    <script>
+        const canvas = document.getElementById('vslamCanvas');
+        const ctx = canvas.getContext('2d');
+
+        const COLORS = { /* ... (colores sin cambios) ... */ };
+        const ROBOT_COLOR = '#3296fa';
+
+        function drawMap(data) {
+            const grid = data.memory_grid;
+            const robotPos = data.robot_pos;
+            // MEJORA: Leer dimensiones del servidor
+            const gridWidth = data.grid_width;
+            const gridHeight = data.grid_height;
+            
+            // Calcular tamaño de celda dinámicamente
+            const cellSize = canvas.width / gridWidth;
+            
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            for (let r = 0; r < gridHeight; r++) {
+                for (let c = 0; c < gridWidth; c++) {
+                    const cellType = grid[r][c];
+                    ctx.fillStyle = COLORS[cellType.toString()] || COLORS['-1'];
+                    ctx.fillRect(c * cellSize, r * cellSize, cellSize, cellSize);
+                }
+            }
+            
+            ctx.fillStyle = ROBOT_COLOR;
+            ctx.fillRect(robotPos[1] * cellSize, robotPos[0] * cellSize, cellSize, cellSize);
+
+            // Dibujar la rejilla
+            for (let i = 0; i <= gridWidth; i++) {
+                ctx.beginPath();
+                ctx.moveTo(i * cellSize, 0);
+                ctx.lineTo(i * cellSize, canvas.height);
+                ctx.strokeStyle = '#14141e';
+                ctx.stroke();
+            }
+            for (let i = 0; i <= gridHeight; i++) {
+                 ctx.beginPath();
+                ctx.moveTo(0, i * cellSize);
+                ctx.lineTo(canvas.width, i * cellSize);
+                ctx.stroke();
+            }
+        }
+
+        async function updateMap() {
+            try {
+                const response = await fetch('/mapdata');
+                if (!response.ok) throw new Error('Network response was not ok');
+                const data = await response.json();
+                if (data.memory_grid && data.memory_grid.length > 0) {
+                   drawMap(data);
+                }
+            } catch (error) {
+                console.error("No se pudo actualizar el mapa:", error);
+            }
+        }
+
+        setInterval(updateMap, 100);
+    </script>
+</body>
+</html>

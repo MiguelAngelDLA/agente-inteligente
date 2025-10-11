@@ -5,7 +5,7 @@ from World import World
 from SimulatedRobot import SimulatedRobot
 
 DEFAULT_CONFIG = {
-    "num_gnomes": 8, "robot_speed": 1.5, "Kp_turn": 4.0, "camera_fov_degrees": 70,
+    "num_gnomes": 15, "robot_speed": 1.5, "Kp_turn": 4.0, "camera_fov_degrees": 70,
     "battery_capacity": 100.0, "battery_low_threshold": 25.0, "time_step": 0.01,
     "camera_range": 3.0, "drain_base": 0.1, "drain_move": 1.0, "drain_turn": 0.5, "charge_rate": 10.0,
 }

@@ -11,7 +11,7 @@
 </head>
 <body>
 
-    <h1>Mapa de Memoria del Robot (VSLAM)</h1>
+    <h1>VSLAM</h1>
     <div id="configPanel" style="margin-bottom: 16px;"></div>
     <canvas id="vslamCanvas" width="800" height="800"></canvas>
 
@@ -19,8 +19,6 @@
         const canvas = document.getElementById('vslamCanvas');
         const ctx = canvas.getContext('2d');
 
-
-        // Definición de colores para cada tipo de celda
         const COLORS = {
             '-1': '#22222a', // desconocido
             '0': '#181820',  // vacío
@@ -34,11 +32,10 @@
         function drawMap(data) {
             const grid = data.memory_grid;
             const robotPos = data.robot_pos;
-            // MEJORA: Leer dimensiones del servidor
+
             const gridWidth = data.grid_width;
             const gridHeight = data.grid_height;
             
-            // Calcular tamaño de celda dinámicamente
             const cellSize = canvas.width / gridWidth;
             
             ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -54,7 +51,6 @@
             ctx.fillStyle = ROBOT_COLOR;
             ctx.fillRect(robotPos[1] * cellSize, robotPos[0] * cellSize, cellSize, cellSize);
 
-            // Dibujar la rejilla
             for (let i = 0; i <= gridWidth; i++) {
                 ctx.beginPath();
                 ctx.moveTo(i * cellSize, 0);
@@ -73,7 +69,6 @@
 
         async function updateMap() {
             try {
-                // Asegura que la petición va al puerto correcto
                 const response = await fetch('http://localhost:8000/mapdata');
                 if (!response.ok) throw new Error('Network response was not ok');
                 const data = await response.json();

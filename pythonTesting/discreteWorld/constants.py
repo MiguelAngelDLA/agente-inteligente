@@ -1,6 +1,5 @@
 import threading
 
-# --- CONFIGURACIÓN PRINCIPAL ---
 CONFIG = {
     "GRID_WIDTH": 10, "GRID_HEIGHT": 10,
     "num_gnomes": 10, "num_obstacles": 15, "animation_speed": 4.0,
@@ -9,12 +8,10 @@ CONFIG = {
     "num_slow_cells": 20, "cost_slow_cell": 8, "drain_slow_modifier": 3.0
 }
 
-# --- CONSTANTES DE LA SIMULACIÓN ---
 CELL_SIZE = 60
 UI_WIDTH = 300
 WEB_SERVER_PORT = 8000
 
-# --- CONSTANTES DE MEMORIA ---
 MEM_UNKNOWN = -1
 MEM_EMPTY = 0
 MEM_OBSTACLE = 1
@@ -22,7 +19,6 @@ MEM_GNOME = 2
 MEM_HOME = 3
 MEM_SLOW = 4
 
-# --- COLORES ---
 COLOR_BG = (20, 20, 30)
 COLOR_GRID = (40, 40, 50)
 COLOR_OBSTACLE = (100, 100, 110)
@@ -38,7 +34,6 @@ COLOR_BATTERY_RED = (220, 50, 50)
 COLOR_VISION = (50, 150, 250, 50)
 COLOR_SLOW_TERRAIN = (139, 69, 19)
 
-# --- DATOS COMPARTIDOS PARA EL SERVIDOR WEB ---
 shared_data = {
     "memory_grid": [],
     "robot_pos": [0, 0],
